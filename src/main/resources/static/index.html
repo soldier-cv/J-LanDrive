@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J-LanDrive</title>
+    <link rel="stylesheet" href="/vendor/element-plus.css" />
+    <style>
+        :root {
+            --bg: #f7f3ee;
+            --panel: rgba(255, 252, 247, 0.95);
+            --panel-solid: #fffdf9;
+            --line: rgba(64, 48, 36, 0.10);
+            --line-strong: rgba(64, 48, 36, 0.18);
+            --text: #26211b;
+            --text-soft: #645b52;
+            --text-faint: #8a8075;
+            --accent: #d97745;
+            --accent-strong: #bf6537;
+            --accent-soft: rgba(217, 119, 69, 0.12);
+            --success-soft: rgba(114, 183, 131, 0.14);
+            --shadow: 0 18px 50px rgba(69, 48, 24, 0.06);
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --radius-sm: 10px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(242, 226, 212, 0.65), transparent 26%),
+                linear-gradient(180deg, #fbf8f3 0%, #f7f3ee 100%);
+            overflow: hidden;
+        }
+
+        #app {
+            height: 100vh;
+        }
+
+        .shell {
+            height: 100%;
+            padding: 14px;
+        }
+
+        .layout {
+            height: 100%;
+            display: grid;
+            grid-template-columns: 216px minmax(0, 1fr);
+            gap: 14px;
+        }
+
+        .sidebar,
+        .main {
+            background: var(--panel);
+            border: 1px solid rgba(255, 255, 255, 0.78);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+        }
+
+        .sidebar {
+            border-radius: 18px;
+            padding: 14px 10px 12px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .brand {
+            padding: 4px 8px 14px;
+            border-bottom: 1px solid var(--line);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-mark {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, #cb6d3d, #e5986d);
+            color: #fff;
+            font-size: 16px;
+            font-weight: 800;
+            box-shadow: 0 8px 18px rgba(217, 119, 69, 0.16);
+            flex: 0 0 auto;
+        }
+
+        .brand-title {
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .brand-copy {
+            margin-top: 2px;
+            font-size: 12px;
+            line-height: 1.4;
+            color: var(--text-faint);
+        }
+
+        .sidebar-section {
+            padding: 0 8px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-faint);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            text-align: left;
+        }
+
+        .sidebar-list {
+            padding: 0 0 8px;
+            overflow-y: auto;
+        }
+
+        .sidebar-item {
+            width: 100%;
+            border: 0;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            padding: 10px 8px;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color .2s ease, color .2s ease;
+        }
+
+        .sidebar-item:hover {
+            background: rgba(255, 255, 255, 0.68);
+        }
+
+        .sidebar-item span {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            text-align: left;
+        }
+
+        .main {
+            border-radius: 18px;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .topbar {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.64), rgba(255, 255, 255, 0.30));
+        }
+
+        .topbar-left {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .path-inline {
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1.3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 0 0 auto;
+        }
+
+        .content {
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 14px;
+        }
+
+        .upload-panel,
+        .toolbar,
+        .table-panel {
+            background: var(--panel-solid);
+            border: 1px solid var(--line);
+        }
+
+        .upload-panel {
+            border-radius: var(--radius-md);
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(249, 244, 237, 0.98));
+            transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease, background-color .22s ease;
+        }
+
+        .upload-panel.drag-active {
+            border-color: rgba(217, 119, 69, 0.46);
+            box-shadow: 0 0 0 4px rgba(217, 119, 69, 0.08);
+            transform: scale(1.01);
+        }
+
+        .upload-copy {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .cloud-mark {
+            width: 48px;
+            height: 48px;
+            border-radius: 999px;
+            background: rgba(217, 119, 69, 0.08);
+            color: var(--accent);
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+            border: 1px solid rgba(217, 119, 69, 0.14);
+            transition: transform .22s ease, background-color .22s ease, border-color .22s ease;
+        }
+
+        .upload-panel.drag-active .cloud-mark {
+            transform: scale(1.08);
+            background: rgba(217, 119, 69, 0.13);
+            border-color: rgba(217, 119, 69, 0.28);
+        }
+
+        .upload-copy-text {
+            min-width: 0;
+        }
+
+        .upload-title {
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+        .upload-subtitle {
+            margin-top: 4px;
+            font-size: 12px;
+            color: var(--text-soft);
+        }
+
+        .upload-trigger {
+            flex: 0 0 auto;
+            transition: transform .22s ease;
+        }
+
+        .upload-panel.drag-active .upload-trigger {
+            transform: scale(1.03);
+        }
+
+        .upload-panel .el-upload {
+            display: inline-flex;
+        }
+
+        .upload-panel .el-upload-dragger {
+            width: 240px;
+            min-width: 240px;
+            min-height: 118px;
+            border-radius: 14px;
+            border: 1px dashed rgba(217, 119, 69, 0.34);
+            background: rgba(255, 255, 255, 0.76);
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform .22s ease, border-color .22s ease, background-color .22s ease, box-shadow .22s ease;
+        }
+
+        .upload-panel.drag-active .el-upload-dragger {
+            border-color: rgba(217, 119, 69, 0.58);
+            background: rgba(255, 248, 242, 0.98);
+            box-shadow: 0 10px 24px rgba(217, 119, 69, 0.10);
+        }
+
+        .upload-cta {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: var(--text-soft);
+            text-align: center;
+        }
+
+        .upload-cta strong {
+            color: var(--text);
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .upload-cta span {
+            font-size: 12px;
+        }
+
+        .toolbar {
+            border-radius: var(--radius-md);
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .path-input {
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .history-menu {
+            min-width: 0;
+        }
+
+        .history-button {
+            width: 36px;
+            height: 36px;
+        }
+
+        .history-panel {
+            width: 360px;
+            max-width: min(92vw, 360px);
+            padding: 2px 0;
+        }
+
+        .history-title {
+            padding: 10px 14px 8px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-faint);
+        }
+
+        .history-empty {
+            padding: 16px 14px;
+            font-size: 12px;
+            color: var(--text-soft);
+        }
+
+        .history-item {
+            padding: 10px 14px;
+            border-top: 1px solid rgba(64, 48, 36, 0.06);
+        }
+
+        .history-file {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            word-break: break-all;
+        }
+
+        .history-path {
+            margin-top: 4px;
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--text-soft);
+            word-break: break-all;
+        }
+
+        .history-time {
+            margin-top: 4px;
+            font-size: 11px;
+            color: var(--text-faint);
+        }
+
+        .table-panel {
+            flex: 1;
+            min-height: 0;
+            border-radius: var(--radius-md);
+            padding: 8px 10px 12px;
+            overflow: hidden;
+        }
+
+        .table-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            cursor: pointer;
+        }
+
+        .table-name span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .download-btn {
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            border: 1px solid rgba(217, 119, 69, 0.20);
+            border-radius: 999px;
+            background: rgba(217, 119, 69, 0.12);
+            color: var(--accent-strong);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform .18s ease, background-color .18s ease, border-color .18s ease, color .18s ease;
+        }
+
+        .download-btn:hover {
+            background: rgba(217, 119, 69, 0.22);
+            border-color: rgba(217, 119, 69, 0.30);
+            color: #9f4f28;
+            transform: scale(1.06);
+        }
+
+        .download-btn:focus-visible {
+            outline: 2px solid rgba(217, 119, 69, 0.26);
+            outline-offset: 2px;
+        }
+
+        .new-upload-row {
+            animation: rowGlow 2.6s ease;
+        }
+
+        .new-upload-row td.el-table__cell {
+            background:
+                linear-gradient(90deg, rgba(114, 183, 131, 0.12), rgba(114, 183, 131, 0.04));
+        }
+
+        .new-upload-cell {
+            position: relative;
+        }
+
+        .new-upload-cell::after {
+            content: "NEW";
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 8px;
+            padding: 0 7px;
+            height: 18px;
+            border-radius: 999px;
+            background: rgba(114, 183, 131, 0.18);
+            color: #387448;
+            font-size: 10px;
+            font-weight: 700;
+            vertical-align: middle;
+            animation: badgePulse 1.2s ease 2;
+        }
+
+        @keyframes rowGlow {
+            0% {
+                box-shadow: inset 0 0 0 9999px rgba(114, 183, 131, 0.24);
+            }
+            100% {
+                box-shadow: inset 0 0 0 9999px rgba(114, 183, 131, 0);
+            }
+        }
+
+        @keyframes badgePulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.08);
+            }
+        }
+
+        .el-button {
+            --el-border-radius-base: 10px;
+            --el-font-size-base: 13px;
+        }
+
+        .el-button.is-circle {
+            width: 36px;
+            height: 36px;
+        }
+
+        .el-button--primary {
+            --el-button-bg-color: #2d2925;
+            --el-button-border-color: #2d2925;
+            --el-button-hover-bg-color: #403a34;
+            --el-button-hover-border-color: #403a34;
+            --el-button-active-bg-color: #1f1b18;
+            --el-button-active-border-color: #1f1b18;
+            --el-button-text-color: #ffffff;
+        }
+
+        .el-input__wrapper,
+        .el-input-group__prepend {
+            box-shadow: none !important;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: #fffdf9;
+        }
+
+        .el-input-group__prepend {
+            color: var(--text-faint);
+            padding: 0 14px;
+        }
+
+        .el-table {
+            --el-table-border-color: transparent;
+            --el-table-header-bg-color: transparent;
+            --el-table-tr-bg-color: transparent;
+            --el-table-row-hover-bg-color: rgba(244, 237, 230, 0.78);
+            --el-table-text-color: var(--text);
+            --el-text-color-regular: var(--text-soft);
+        }
+
+        .el-table th.el-table__cell {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-faint);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding-top: 16px;
+            padding-bottom: 10px;
+        }
+
+        .el-table td.el-table__cell {
+            border-bottom: 1px solid rgba(64, 48, 36, 0.06);
+            padding-top: 14px;
+            padding-bottom: 14px;
+        }
+
+        .el-table::before {
+            display: none;
+        }
+
+        .el-popover.el-popper {
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            box-shadow: 0 14px 34px rgba(42, 32, 20, 0.10);
+        }
+
+        .el-loading-mask {
+            background-color: rgba(252, 249, 244, 0.72);
+            backdrop-filter: blur(4px);
+        }
+
+        @media (max-width: 1080px) {
+            body {
+                overflow: auto;
+            }
+
+            #app,
+            .shell {
+                height: auto;
+                min-height: 100vh;
+            }
+
+            .layout {
+                height: auto;
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar,
+            .main {
+                min-height: auto;
+            }
+
+            .sidebar-list {
+                max-height: 220px;
+            }
+
+            .topbar,
+            .upload-panel {
+                flex-wrap: wrap;
+            }
+
+            .upload-panel {
+                align-items: stretch;
+            }
+
+            .upload-panel .el-upload-dragger {
+                width: 100%;
+                min-width: 0;
+            }
+
+            .path-input {
+                min-width: 0;
+            }
+
+            .history-panel {
+                width: min(92vw, 360px);
+            }
+        }
+    </style>
+    <script src="/vendor/vue.global.prod.js"></script>
+    <script src="/vendor/element-plus.full.min.js"></script>
+    <script src="/vendor/axios.min.js"></script>
+    <script src="/vendor/element-plus-icons.iife.min.js"></script>
+</head>
+
+<body>
+    <div id="app" v-loading.fullscreen.lock="downloading" element-loading-text="正在准备下载...">
+        <div class="shell">
+            <div class="layout">
+                <aside class="sidebar">
+                    <div class="brand">
+                        <div class="brand-mark">J</div>
+                        <div>
+                            <div class="brand-title">J-LanDrive</div>
+                            <div class="brand-copy">局域网文件工具</div>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-section">快速访问</div>
+                    <div class="sidebar-list">
+                        <button class="sidebar-item" @click="loadFiles('/')">
+            <span>我的电脑</span>
+        </button>
+        <button v-for="item in shortcuts" :key="item.path" class="sidebar-item" @click="loadFiles(item.path)">
+            <span>{{ item.name }}</span>
+        </button>
+                    </div>
+                </aside>
+
+                <main class="main">
+                    <section class="topbar">
+                        <div class="topbar-left">
+                            <div class="path-inline">{{ currentPath }}</div>
+                        </div>
+                        <div class="topbar-right">
+                            <el-popover placement="bottom-end" :width="360" trigger="click">
+                                <template #reference>
+                                    <el-button class="history-button" :icon="MoreFilled" circle></el-button>
+                                </template>
+                                <div class="history-panel">
+                                    <div class="history-title">上传记录</div>
+                                    <div v-if="uploadHistory.length === 0" class="history-empty">
+                                        暂无上传记录
+                                    </div>
+                                    <div v-for="item in uploadHistory" :key="item.id" class="history-item">
+                                        <div class="history-file">{{ item.savedName }}</div>
+                                        <div class="history-path">{{ item.targetPath }}</div>
+                                        <div class="history-time">{{ item.time }}</div>
+                                    </div>
+                                </div>
+                            </el-popover>
+                        </div>
+                    </section>
+
+                    <div class="content">
+                        <div
+                            class="upload-panel"
+                            :class="{ 'drag-active': dragActive }"
+                            @dragenter.prevent="handleDragEnter"
+                            @dragover.prevent="handleDragOver"
+                            @dragleave.prevent="handleDragLeave"
+                            @drop.prevent="handleDropReset">
+                            <div class="upload-copy">
+                                <div class="cloud-mark">
+                                    <el-icon size="28">
+                                        <upload-filled />
+                                    </el-icon>
+                                </div>
+                                <div class="upload-copy-text">
+                                    <div class="upload-title">快速上传</div>
+                                    <div class="upload-subtitle">支持点击选择与拖拽上传</div>
+                                </div>
+                            </div>
+                            <div class="upload-trigger">
+                                <el-upload
+                                    drag
+                                    multiple
+                                    :show-file-list="false"
+                                    :disabled="currentPath === '/' || uploadLoading"
+                                    :action="'/api/upload'"
+                                    :data="{ path: currentPath }"
+                                    :before-upload="beforeUpload"
+                                    :on-success="handleUploadSuccess"
+                                    :on-error="handleUploadError"
+                                    @progress="handleUploadProgress">
+                                    <div class="upload-cta">
+                                        <el-icon size="28">
+                                            <upload-filled />
+                                        </el-icon>
+                                        <strong>点击或拖拽上传</strong>
+                                        <span>{{ currentPath === '/' ? '请先进入目录' : '文件将上传到当前路径' }}</span>
+                                    </div>
+                                </el-upload>
+                            </div>
+                        </div>
+
+                        <div class="toolbar">
+                            <el-button :icon="ArrowUp" circle @click="goUp" :disabled="currentPath === '/'"></el-button>
+                            <el-button :icon="Refresh" circle @click="loadFiles(currentPath)"></el-button>
+                            <el-button
+                                :icon="Download"
+                                circle
+                                type="primary"
+                                :disabled="selection.length === 0"
+                                @click="handleBatchDownload">
+                            </el-button>
+                            <el-input v-model="currentPath" class="path-input" @keyup.enter="loadFiles(currentPath)">
+                                <template #prepend>路径</template>
+                            </el-input>
+                        </div>
+
+                        <div class="table-panel">
+                            <el-table
+                                :data="fileList"
+                                row-key="path"
+                                style="width: 100%; height: 100%"
+                                v-loading="loading"
+                                :row-class-name="getRowClassName"
+                                @selection-change="handleSelectionChange"
+                                @row-dblclick="handleDbClick">
+                                <el-table-column type="selection" width="52"></el-table-column>
+                                <el-table-column label="名称" min-width="320">
+                                    <template #default="scope">
+                                        <div class="table-name" :class="{ 'new-upload-cell': isNewUpload(scope.row) }" @click="handleDbClick(scope.row)">
+                                            <el-icon v-if="scope.row.type === 'DIR'" size="19" color="#d97745">
+                                                <folder />
+                                            </el-icon>
+                                            <el-icon v-else size="19" color="#8a8075">
+                                                <document />
+                                            </el-icon>
+                                            <span>{{ scope.row.name }}</span>
+                                        </div>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="size" label="大小" width="130" :formatter="formatSize"></el-table-column>
+                                <el-table-column prop="time" label="修改时间" width="180"></el-table-column>
+                                <el-table-column label="操作" width="92" align="center">
+                                    <template #default="scope">
+                                        <button
+                                            v-if="scope.row.type === 'FILE'"
+                                            class="download-btn"
+                                            type="button"
+                                            title="下载"
+                                            @click.stop="downloadFile(scope.row)">
+                                            <el-icon size="18">
+                                                <download />
+                                            </el-icon>
+                                        </button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+        const { ElMessage } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const UPLOAD_HISTORY_KEY = 'jlandrive-upload-history';
+                const fileList = ref([]);
+                const currentPath = ref("/");
+                const loading = ref(false);
+                const selection = ref([]);
+                const shortcuts = ref([]);
+                const downloading = ref(false);
+                const uploadLoading = ref(false);
+                const dragActive = ref(false);
+                const dragDepth = ref(0);
+                const uploadHistory = ref([]);
+                const newUploadPaths = ref(new Set());
+
+                const normalizePath = (path) => {
+                    if (!path) return "/";
+                    return path;
+                };
+
+                const formatNow = () => {
+                    const now = new Date();
+                    const pad = (value) => String(value).padStart(2, '0');
+                    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+                };
+
+                const loadUploadHistory = () => {
+                    try {
+                        const raw = window.localStorage.getItem(UPLOAD_HISTORY_KEY);
+                        uploadHistory.value = raw ? JSON.parse(raw) : [];
+                    } catch (error) {
+                        uploadHistory.value = [];
+                    }
+                };
+
+                const saveUploadHistory = () => {
+                    window.localStorage.setItem(UPLOAD_HISTORY_KEY, JSON.stringify(uploadHistory.value.slice(0, 30)));
+                };
+
+                const rememberUpload = (result) => {
+                    uploadHistory.value.unshift({
+                        id: `${result.path}-${Date.now()}`,
+                        savedName: result.savedName,
+                        targetPath: result.path,
+                        time: formatNow()
+                    });
+                    uploadHistory.value = uploadHistory.value.slice(0, 30);
+                    saveUploadHistory();
+                };
+
+                const resetNewUploadState = () => {
+                    newUploadPaths.value = new Set();
+                };
+
+                const markNewUpload = (path) => {
+                    const next = new Set(newUploadPaths.value);
+                    next.add(path);
+                    newUploadPaths.value = next;
+                    window.setTimeout(() => {
+                        const updated = new Set(newUploadPaths.value);
+                        updated.delete(path);
+                        newUploadPaths.value = updated;
+                    }, 3000);
+                };
+
+                const loadFiles = (path) => {
+                    loading.value = true;
+                    axios.get('/api/files', { params: { path: normalizePath(path) } })
+                        .then((res) => {
+                            fileList.value = res.data.list || [];
+                            currentPath.value = res.data.currentPath || '/';
+                            selection.value = [];
+                        })
+                        .catch(() => ElMessage.error('加载文件列表失败'))
+                        .finally(() => {
+                            loading.value = false;
+                        });
+                };
+
+                const loadShortcuts = () => {
+                    axios.get('/api/shortcuts')
+                        .then((res) => {
+                            shortcuts.value = res.data || [];
+                        })
+                        .catch(() => {
+                            shortcuts.value = [];
+                        });
+                };
+
+                const goUp = () => {
+                    if (currentPath.value === '/' || !currentPath.value) return;
+
+                    let path = currentPath.value.replace(/\\/g, '/');
+                    if (path.endsWith('/')) {
+                        path = path.slice(0, -1);
+                    }
+
+                    const lastSlash = path.lastIndexOf('/');
+                    if (lastSlash <= 0) {
+                        resetNewUploadState();
+                        loadFiles('/');
+                        return;
+                    }
+
+                    const parent = path.substring(0, lastSlash);
+                    resetNewUploadState();
+                    loadFiles(parent.endsWith(':') ? `${parent}/` : parent);
+                };
+
+                const formatBytes = (size) => {
+                    if (size < 1024) return `${size} B`;
+                    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+                    if (size < 1024 * 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`;
+                    return `${(size / 1024 / 1024 / 1024).toFixed(1)} GB`;
+                };
+
+                const formatSize = (row) => {
+                    if (row.type === 'DIR') {
+                        if (currentPath.value === '/' && row.size > 0) {
+                            return formatBytes(row.size);
+                        }
+                        return '-';
+                    }
+                    return formatBytes(row.size);
+                };
+
+                const handleSelectionChange = (val) => {
+                    selection.value = val;
+                };
+
+                const handleDbClick = (row) => {
+                    if (row.type === 'DIR') {
+                        resetNewUploadState();
+                        loadFiles(row.path);
+                        return;
+                    }
+                    downloadFile(row);
+                };
+
+                const downloadFile = (row) => {
+                    if (!row.downloadId) {
+                        ElMessage.error('文件下载参数缺失');
+                        return;
+                    }
+                    window.location.href = `/api/download?id=${encodeURIComponent(row.downloadId)}`;
+                };
+
+                const downloadZip = () => {
+                    if (selection.value.length === 0) return;
+
+                    downloading.value = true;
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/api/download/zip';
+                    form.style.display = 'none';
+
+                    selection.value.forEach((row) => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'paths';
+                        input.value = row.path;
+                        form.appendChild(input);
+                    });
+
+                    document.body.appendChild(form);
+                    form.submit();
+                    document.body.removeChild(form);
+
+                    window.setTimeout(() => {
+                        downloading.value = false;
+                    }, 1500);
+                };
+
+                const handleBatchDownload = () => {
+                    if (selection.value.length === 0) return;
+                    if (selection.value.length === 1 && selection.value[0].type === 'FILE') {
+                        downloadFile(selection.value[0]);
+                        return;
+                    }
+                    downloadZip();
+                };
+
+                const beforeUpload = () => {
+                    if (currentPath.value === '/') {
+                        ElMessage.warning('请先进入具体目录再上传');
+                        return false;
+                    }
+                    uploadLoading.value = true;
+                    return true;
+                };
+
+                const handleUploadProgress = () => {
+                    uploadLoading.value = true;
+                };
+
+                const resetDragState = () => {
+                    dragDepth.value = 0;
+                    dragActive.value = false;
+                };
+
+                const handleUploadSuccess = (response) => {
+                    uploadLoading.value = false;
+                    resetDragState();
+                    if (response?.path) {
+                        rememberUpload(response);
+                        markNewUpload(response.path);
+                    }
+                    ElMessage.success('上传完成');
+                    loadFiles(currentPath.value);
+                };
+
+                const handleUploadError = (error) => {
+                    uploadLoading.value = false;
+                    resetDragState();
+                    const message = error?.response?.data?.message || '上传失败';
+                    ElMessage.error(message);
+                };
+
+                const handleDragEnter = () => {
+                    if (currentPath.value === '/' || uploadLoading.value) return;
+                    dragDepth.value += 1;
+                    dragActive.value = true;
+                };
+
+                const handleDragOver = () => {
+                    if (currentPath.value === '/' || uploadLoading.value) return;
+                    dragActive.value = true;
+                };
+
+                const handleDragLeave = () => {
+                    if (dragDepth.value > 0) {
+                        dragDepth.value -= 1;
+                    }
+                    if (dragDepth.value === 0) {
+                        dragActive.value = false;
+                    }
+                };
+
+                const handleDropReset = () => {
+                    resetDragState();
+                };
+
+                const isNewUpload = (row) => {
+                    return newUploadPaths.value.has(row.path);
+                };
+
+                const getRowClassName = ({ row }) => {
+                    return isNewUpload(row) ? 'new-upload-row' : '';
+                };
+
+                onMounted(() => {
+                    loadUploadHistory();
+                    loadFiles('/');
+                    loadShortcuts();
+                });
+
+                return {
+                    fileList,
+                    currentPath,
+                    loading,
+                    selection,
+                    shortcuts,
+                    downloading,
+                    uploadLoading,
+                    dragActive,
+                    uploadHistory,
+                    loadFiles,
+                    goUp,
+                    formatSize,
+                    handleSelectionChange,
+                    handleDbClick,
+                    downloadFile,
+                    handleBatchDownload,
+                    beforeUpload,
+                    handleUploadProgress,
+                    handleUploadSuccess,
+                    handleUploadError,
+                    handleDragEnter,
+                    handleDragOver,
+                    handleDragLeave,
+                    handleDropReset,
+                    isNewUpload,
+                    getRowClassName,
+                    Refresh: ElementPlusIconsVue.Refresh,
+                    ArrowUp: ElementPlusIconsVue.ArrowUp,
+                    Download: ElementPlusIconsVue.Download,
+                    UploadFilled: ElementPlusIconsVue.UploadFilled,
+                    MoreFilled: ElementPlusIconsVue.MoreFilled,
+                    Monitor: ElementPlusIconsVue.Monitor,
+                    Folder: ElementPlusIconsVue.Folder,
+                    Document: ElementPlusIconsVue.Document
+                };
+            }
+        });
+
+        app.use(ElementPlus);
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+        app.mount('#app');
+    </script>
+</body>
+
+</html>
