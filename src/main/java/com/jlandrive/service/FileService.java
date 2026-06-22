@@ -15,8 +15,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.Base64;
@@ -92,6 +94,51 @@ public class FileService {
             log.warn("Invalid downloadId: {}", downloadId);
             return null;
         }
+    }
+
+    /**
+     * 将前端下载标识解析为文件列表，避免下载链接直接暴露系统路径。
+     */
+    public List<File> getFilesByDownloadIds(List<String> downloadIds) {
+        List<File> files = new ArrayList<>();
+        if (downloadIds == null) {
+            return files;
+        }
+        for (String downloadId : downloadIds) {
+            File file = getFileByDownloadId(downloadId);
+            if (file != null && file.exists()) {
+                files.add(file);
+            }
+        }
+        return files;
+    }
+
+    /**
+     * 生成临时 ZIP 文件，用于需要 Content-Length 的下载器兼容场景。
+     */
+    public File createTempZip(List<File> files) throws IOException {
+        if (files == null || files.isEmpty()) {
+            throw new IOException("没有可下载的文件");
+        }
+
+        File tempZip = Files.createTempFile("j-landrive-", ".zip").toFile();
+        tempZip.deleteOnExit();
+
+        try (ZipOutputStream zipOut = new ZipOutputStream(new BufferedOutputStream(Files.newOutputStream(tempZip.toPath())), StandardCharsets.UTF_8)) {
+            zipOut.setLevel(java.util.zip.Deflater.BEST_SPEED);
+            for (File file : files) {
+                if (!file.exists()) {
+                    continue;
+                }
+                addToZip(file, file.getName(), zipOut);
+            }
+            zipOut.flush();
+        } catch (IOException e) {
+            FileUtil.del(tempZip);
+            throw e;
+        }
+
+        return tempZip;
     }
 
     /**

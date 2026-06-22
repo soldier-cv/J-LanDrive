@@ -922,24 +922,21 @@
                 const downloadZip = () => {
                     if (selection.value.length === 0) return;
 
-                    downloading.value = true;
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = '/api/download/zip';
-                    form.style.display = 'none';
-
+                    const params = new URLSearchParams();
                     selection.value.forEach((row) => {
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = 'paths';
-                        input.value = row.path;
-                        form.appendChild(input);
+                        if (row.downloadId) {
+                            params.append('ids', row.downloadId);
+                        }
                     });
 
-                    document.body.appendChild(form);
-                    form.submit();
-                    document.body.removeChild(form);
+                    if (!params.has('ids')) {
+                        ElMessage.error('批量下载参数缺失');
+                        return;
+                    }
 
+                    const fileName = `batch_download_${Date.now()}.zip`;
+                    downloading.value = true;
+                    window.location.href = `/api/download/zip/${encodeURIComponent(fileName)}?${params.toString()}`;
                     window.setTimeout(() => {
                         downloading.value = false;
                     }, 1500);

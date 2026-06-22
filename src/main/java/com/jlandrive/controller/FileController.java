@@ -9,12 +9,17 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.FilterInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -57,6 +62,41 @@ public class FileController {
         fileService.downloadZip(paths, response);
     }
 
+    @GetMapping("/download/zip")
+    public ResponseEntity<Resource> downloadZipByIds(@RequestParam("ids") List<String> ids) throws IOException {
+        return downloadZipByIds(ids, null);
+    }
+
+    @GetMapping("/download/zip/{fileName:.+}")
+    public ResponseEntity<Resource> downloadZipByIds(
+            @RequestParam("ids") List<String> ids,
+            @PathVariable(required = false) String fileName
+    ) throws IOException {
+        List<File> files = fileService.getFilesByDownloadIds(ids);
+        if (files.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (files.size() == 1 && files.get(0).isFile()) {
+            File file = files.get(0);
+            Resource resource = new org.springframework.core.io.FileSystemResource(file);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, buildContentDisposition(file.getName()))
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentLength(file.length())
+                    .body(resource);
+        }
+
+        File zipFile = fileService.createTempZip(files);
+        String downloadFileName = normalizeZipFileName(fileName);
+        Resource resource = new InputStreamResource(new DeleteOnCloseFileInputStream(zipFile));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, buildContentDisposition(downloadFileName))
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .contentLength(zipFile.length())
+                .body(resource);
+    }
+
     @PostMapping("/upload")
     public UploadResult upload(@RequestParam(defaultValue = "/") String path, @RequestParam("file") MultipartFile file) throws IOException {
         return fileService.upload(path, file);
@@ -70,10 +110,49 @@ public class FileController {
     @ExceptionHandler(IOException.class)
     public ResponseEntity<Map<String, String>> handleIoException(IOException exception) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("message", exception.getMessage()));
     }
 
     private String buildContentDisposition(String fileName) {
         return fileService.buildContentDisposition(fileName);
+    }
+
+    private String normalizeZipFileName(String fileName) {
+        String defaultName = "batch_download.zip";
+        if (fileName == null || fileName.isBlank()) {
+            return defaultName;
+        }
+
+        String decodedName = java.net.URLDecoder.decode(fileName, StandardCharsets.UTF_8);
+        String safeName = decodedName
+                .replace("\\", "_")
+                .replace("/", "_")
+                .replace("\"", "")
+                .trim();
+        if (safeName.isBlank()) {
+            return defaultName;
+        }
+        return safeName.toLowerCase().endsWith(".zip") ? safeName : safeName + ".zip";
+    }
+
+    private static class DeleteOnCloseFileInputStream extends FilterInputStream {
+        private final File file;
+
+        DeleteOnCloseFileInputStream(File file) throws IOException {
+            super(new FileInputStream(file));
+            this.file = file;
+        }
+
+        @Override
+        public void close() throws IOException {
+            try {
+                super.close();
+            } finally {
+                if (file.exists() && !file.delete()) {
+                    file.deleteOnExit();
+                }
+            }
+        }
     }
 }
