@@ -922,24 +922,32 @@
                 const downloadZip = () => {
                     if (selection.value.length === 0) return;
 
-                    const params = new URLSearchParams();
-                    selection.value.forEach((row) => {
-                        if (row.downloadId) {
-                            params.append('ids', row.downloadId);
-                        }
-                    });
+                    const ids = selection.value
+                        .map((row) => row.downloadId)
+                        .filter((id) => !!id);
 
-                    if (!params.has('ids')) {
+                    if (ids.length === 0) {
                         ElMessage.error('批量下载参数缺失');
                         return;
                     }
 
-                    const fileName = `batch_download_${Date.now()}.zip`;
                     downloading.value = true;
-                    window.location.href = `/api/download/zip/${encodeURIComponent(fileName)}?${params.toString()}`;
-                    window.setTimeout(() => {
-                        downloading.value = false;
-                    }, 1500);
+                    axios.post('/api/download/zip/prepare', ids)
+                        .then((res) => {
+                            const downloadUrl = res?.data?.downloadUrl;
+                            if (!downloadUrl) {
+                                throw new Error('missing download url');
+                            }
+                            window.location.href = downloadUrl;
+                        })
+                        .catch(() => {
+                            ElMessage.error('批量下载准备失败');
+                        })
+                        .finally(() => {
+                            window.setTimeout(() => {
+                                downloading.value = false;
+                            }, 1500);
+                        });
                 };
 
                 const handleBatchDownload = () => {

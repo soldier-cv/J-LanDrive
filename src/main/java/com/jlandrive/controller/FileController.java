@@ -2,6 +2,7 @@ package com.jlandrive.controller;
 
 import com.jlandrive.model.FileListResponse;
 import com.jlandrive.model.UploadResult;
+import com.jlandrive.model.ZipDownloadPreparation;
 import com.jlandrive.service.FileService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -97,6 +98,29 @@ public class FileController {
                 .body(resource);
     }
 
+    @PostMapping("/download/zip/prepare")
+    public ZipDownloadPreparation prepareZipDownload(@RequestBody List<String> ids) throws IOException {
+        return fileService.prepareZipDownload(ids);
+    }
+
+    @GetMapping("/download/zip/prepared/{token}/{fileName:.+}")
+    public ResponseEntity<Resource> downloadPreparedZip(
+            @PathVariable String token,
+            @PathVariable String fileName
+    ) throws IOException {
+        FileService.PreparedZip preparedZip = fileService.getPreparedZip(token);
+        if (preparedZip == null || !preparedZip.file().exists()) {
+            return ResponseEntity.status(HttpStatus.GONE).build();
+        }
+
+        Resource resource = new InputStreamResource(new DeleteOnClosePreparedZipInputStream(token, preparedZip.file()));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, buildContentDisposition(normalizeZipFileName(fileName)))
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .contentLength(preparedZip.file().length())
+                .body(resource);
+    }
+
     @PostMapping("/upload")
     public UploadResult upload(@RequestParam(defaultValue = "/") String path, @RequestParam("file") MultipartFile file) throws IOException {
         return fileService.upload(path, file);
@@ -152,6 +176,24 @@ public class FileController {
                 if (file.exists() && !file.delete()) {
                     file.deleteOnExit();
                 }
+            }
+        }
+    }
+
+    private class DeleteOnClosePreparedZipInputStream extends FilterInputStream {
+        private final String token;
+
+        DeleteOnClosePreparedZipInputStream(String token, File file) throws IOException {
+            super(new FileInputStream(file));
+            this.token = token;
+        }
+
+        @Override
+        public void close() throws IOException {
+            try {
+                super.close();
+            } finally {
+                fileService.releasePreparedZip(token);
             }
         }
     }

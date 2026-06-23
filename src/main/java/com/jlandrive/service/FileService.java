@@ -8,6 +8,7 @@ import cn.hutool.core.util.URLUtil;
 import com.jlandrive.model.FileInfo;
 import com.jlandrive.model.FileListResponse;
 import com.jlandrive.model.UploadResult;
+import com.jlandrive.model.ZipDownloadPreparation;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.Base64;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -29,6 +31,8 @@ import java.util.zip.ZipOutputStream;
 @Service
 @RequiredArgsConstructor
 public class FileService {
+    private static final long ZIP_CACHE_TTL_MS = 5 * 60 * 1000L;
+    private final Map<String, PreparedZip> preparedZipCache = new ConcurrentHashMap<>();
 
     /**
      * List files in the specified path.
@@ -139,6 +143,49 @@ public class FileService {
         }
 
         return tempZip;
+    }
+
+    /**
+     * 预生成 ZIP 文件并返回可重复访问的下载令牌，兼容 IDM 的二次请求行为。
+     */
+    public ZipDownloadPreparation prepareZipDownload(List<String> downloadIds) throws IOException {
+        cleanupExpiredPreparedZips();
+
+        List<File> files = getFilesByDownloadIds(downloadIds);
+        if (files.isEmpty()) {
+            throw new IOException("没有可下载的文件");
+        }
+
+        String fileName = "batch_download_" + System.currentTimeMillis() + ".zip";
+        File zipFile = createTempZip(files);
+        String token = UUID.randomUUID().toString().replace("-", "");
+        preparedZipCache.put(token, new PreparedZip(fileName, zipFile, System.currentTimeMillis() + ZIP_CACHE_TTL_MS));
+
+        return ZipDownloadPreparation.builder()
+                .token(token)
+                .fileName(fileName)
+                .downloadUrl("/api/download/zip/prepared/" + token + "/" + fileName)
+                .build();
+    }
+
+    public PreparedZip getPreparedZip(String token) {
+        cleanupExpiredPreparedZips();
+        PreparedZip preparedZip = preparedZipCache.get(token);
+        if (preparedZip == null) {
+            return null;
+        }
+        if (preparedZip.expiresAt() < System.currentTimeMillis()) {
+            removePreparedZip(token, preparedZip);
+            return null;
+        }
+        return preparedZip;
+    }
+
+    public void releasePreparedZip(String token) {
+        PreparedZip preparedZip = preparedZipCache.remove(token);
+        if (preparedZip != null) {
+            FileUtil.del(preparedZip.file());
+        }
     }
 
     /**
@@ -332,6 +379,30 @@ public class FileService {
         return Base64.getUrlEncoder()
                 .withoutPadding()
                 .encodeToString(file.getAbsolutePath().getBytes(StandardCharsets.UTF_8));
+    }
+
+    private void cleanupExpiredPreparedZips() {
+        long now = System.currentTimeMillis();
+        List<String> expiredTokens = new ArrayList<>();
+        for (Map.Entry<String, PreparedZip> entry : preparedZipCache.entrySet()) {
+            if (entry.getValue().expiresAt() < now) {
+                expiredTokens.add(entry.getKey());
+            }
+        }
+        for (String token : expiredTokens) {
+            PreparedZip preparedZip = preparedZipCache.remove(token);
+            if (preparedZip != null) {
+                FileUtil.del(preparedZip.file());
+            }
+        }
+    }
+
+    private void removePreparedZip(String token, PreparedZip preparedZip) {
+        preparedZipCache.remove(token);
+        FileUtil.del(preparedZip.file());
+    }
+
+    public record PreparedZip(String fileName, File file, long expiresAt) {
     }
 
     /**
