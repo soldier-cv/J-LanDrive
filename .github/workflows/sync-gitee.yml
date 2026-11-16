@@ -1,0 +1,47 @@
+name: Sync to Gitee
+
+# 仅在推送 master 分支或手动调度时同步源码镜像至 Gitee；
+# 打 Tag 时的发版由 release.yml 统一交付，避免双重推送与并发冲突。
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: sync-gitee-master
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to Gitee
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          export GIT_TERMINAL_PROMPT=0
+
+          if [ -z "$GITEE_TOKEN" ]; then
+            echo "::error::未检测到 GITEE_TOKEN Secret，请在 GitHub 仓库 Settings -> Secrets 中配置 GITEE_TOKEN。"
+            exit 1
+          fi
+
+          if [ "${{ github.repository }}" != "soldier-cv/J-LanDrive" ]; then
+            echo "非主仓库，跳过 Gitee 镜像同步。"
+            exit 0
+          fi
+
+          echo "配置 Gitee 远端仓库..."
+          git remote add gitee "https://huaxudong:${GITEE_TOKEN}@gitee.com/huaxudong/J-LanDrive.git"
+
+          echo "对齐并推送 master 分支到 Gitee..."
+          git fetch origin master
+          git checkout -B master origin/master
+          git push -u gitee master:master --force
+
+          echo "✅ Gitee master 镜像同步完成！"
